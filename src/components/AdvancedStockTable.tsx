@@ -8,13 +8,15 @@ interface AdvancedStockTableProps {
   onSort: (column: string) => void;
   sortColumn: string;
   sortDirection: 'asc' | 'desc';
+  onStockClick?: (stock: Stock) => void;
 }
 
 const AdvancedStockTable = ({ 
   stocks, 
   onSort, 
   sortColumn, 
-  sortDirection 
+  sortDirection,
+  onStockClick
 }: AdvancedStockTableProps) => {
   const formatMarketCap = (price: number): string => {
     // Simplified market cap estimation based on price
@@ -90,7 +92,11 @@ const AdvancedStockTable = ({
                 const ratingColor = getRatingColor(score.rating);
 
                 return (
-                  <tr key={stock.symbol} style={styles.row}>
+                  <tr 
+                    key={stock.symbol} 
+                    style={styles.row}
+                    onClick={() => onStockClick?.(stock)}
+                  >
                     <td style={styles.tdSymbol}>{stock.symbol}</td>
                     <td style={styles.tdPrice}>₹{stock.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td style={{
@@ -233,8 +239,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     userSelect: 'none',
   },
   row: {
-    borderBottom: '1px solid #21262d',
+    borderBottom: '1px solid #1C2128',
     transition: 'background 0.15s ease',
+    cursor: 'pointer',
   },
   tdSymbol: {
     padding: '12px',
