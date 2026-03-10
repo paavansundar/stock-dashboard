@@ -1,6 +1,7 @@
 import React from 'react';
 import { FilterState } from '../types';
 import { getAllSectors } from '../services/api';
+import { getPresetFilters } from '../hooks/useStockFilter';
 import { Activity, TrendingUp, Globe, Building2, MessageSquare, X } from 'lucide-react';
 
 const SECTORS = getAllSectors();
@@ -38,6 +39,37 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onFilterChange, onRe
           <X size={14} />
           RESET ALL
         </button>
+      </div>
+
+      {/* Preset Filters */}
+      <div style={styles.presets}>
+        <div style={styles.presetsTitle}>QUICK PRESETS</div>
+        <div style={styles.presetButtons}>
+          <button
+            onClick={() => onFilterChange(getPresetFilters('momentum'))}
+            style={styles.presetButton}
+          >
+            🚀 Momentum Picks
+          </button>
+          <button
+            onClick={() => onFilterChange(getPresetFilters('value'))}
+            style={styles.presetButton}
+          >
+            💎 Value Buys
+          </button>
+          <button
+            onClick={() => onFilterChange(getPresetFilters('fno'))}
+            style={styles.presetButton}
+          >
+            📊 F&O Favorites
+          </button>
+          <button
+            onClick={() => onFilterChange(getPresetFilters('fii'))}
+            style={styles.presetButton}
+          >
+            🏦 FII Darlings
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
