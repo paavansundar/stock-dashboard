@@ -1,5 +1,6 @@
 import React from 'react';
 import { FilterState } from '../types';
+import { getDefaultFilters, getPresetFilters } from '../hooks/useStockFilter';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 interface AdvancedFilterSidebarProps {
@@ -31,6 +32,84 @@ const AdvancedFilterSidebar = ({ filters, onFilterChange }: AdvancedFilterSideba
       <div style={styles.header}>
         <div style={styles.title}>INSTITUTIONAL SCANNER</div>
         <div style={styles.subtitle}>MULTI-FACTOR COMPOSITE SCORING</div>
+      </div>
+
+      {/* Preset Filters */}
+      <div style={styles.presets}>
+        <div style={styles.presetsTitle}>STRATEGY PRESETS</div>
+        <div style={styles.presetGrid}>
+          <button
+            onClick={() => onFilterChange(getPresetFilters('momentum'))}
+            style={styles.presetButton}
+            title="Strong uptrend stocks with high momentum"
+          >
+            <div style={styles.presetIcon}>🚀</div>
+            <div style={styles.presetLabel}>MOMENTUM</div>
+          </button>
+          <button
+            onClick={() => onFilterChange(getPresetFilters('value'))}
+            style={styles.presetButton}
+            title="Undervalued quality stocks"
+          >
+            <div style={styles.presetIcon}>💎</div>
+            <div style={styles.presetLabel}>VALUE</div>
+          </button>
+          <button
+            onClick={() => onFilterChange(getPresetFilters('fno'))}
+            style={styles.presetButton}
+            title="High liquidity F&O stocks"
+          >
+            <div style={styles.presetIcon}>📊</div>
+            <div style={styles.presetLabel}>F&O</div>
+          </button>
+          <button
+            onClick={() => onFilterChange(getPresetFilters('fii'))}
+            style={styles.presetButton}
+            title="FII buying favorites"
+          >
+            <div style={styles.presetIcon}>🏦</div>
+            <div style={styles.presetLabel}>FII</div>
+          </button>
+        </div>
+      </div>
+
+      {/* Preset Filters */}
+      <div style={styles.presets}>
+        <div style={styles.presetsTitle}>STRATEGY PRESETS</div>
+        <div style={styles.presetGrid}>
+          <button
+            onClick={() => onFilterChange(getPresetFilters('momentum'))}
+            style={styles.presetButton}
+            title="Strong uptrend stocks with high momentum"
+          >
+            <div style={styles.presetIcon}>🚀</div>
+            <div style={styles.presetLabel}>MOMENTUM</div>
+          </button>
+          <button
+            onClick={() => onFilterChange(getPresetFilters('value'))}
+            style={styles.presetButton}
+            title="Undervalued quality stocks"
+          >
+            <div style={styles.presetIcon}>💎</div>
+            <div style={styles.presetLabel}>VALUE</div>
+          </button>
+          <button
+            onClick={() => onFilterChange(getPresetFilters('fno'))}
+            style={styles.presetButton}
+            title="High liquidity F&O stocks"
+          >
+            <div style={styles.presetIcon}>📊</div>
+            <div style={styles.presetLabel}>F&O</div>
+          </button>
+          <button
+            onClick={() => onFilterChange(getPresetFilters('fii'))}
+            style={styles.presetButton}
+            title="FII buying favorites"
+          >
+            <div style={styles.presetIcon}>🏦</div>
+            <div style={styles.presetLabel}>FII</div>
+          </button>
+        </div>
       </div>
 
       {/* Technical Filters */}
@@ -379,24 +458,7 @@ const AdvancedFilterSidebar = ({ filters, onFilterChange }: AdvancedFilterSideba
       <div style={styles.footer}>
         <button 
           style={styles.resetButton}
-          onClick={() => onFilterChange({
-            priceVsEMA: [],
-            rsiRange: { min: 0, max: 100 },
-            macdSignal: [],
-            volumeSpikeMin: 0,
-            adxMin: 0,
-            peMin: 0,
-            peMax: 999,
-            roeMin: 0,
-            roceMin: 0,
-            debtToEquityMax: 999,
-            fiiNetMin: -9999,
-            pcrMin: 0,
-            pcrMax: 5,
-            analystBuyMin: 0,
-            newsSentimentFilter: [],
-            sectors: []
-          })}
+          onClick={() => onFilterChange(getDefaultFilters())}
         >
           RESET ALL FILTERS
         </button>
@@ -430,6 +492,44 @@ const styles: { [key: string]: React.CSSProperties } = {
   subtitle: {
     color: '#8b949e',
     fontSize: '10px',
+    letterSpacing: '0.5px',
+  },
+  presets: {
+    padding: '16px 20px',
+    borderBottom: '2px solid #F0B429',
+    background: '#0A0E17',
+  },
+  presetsTitle: {
+    fontSize: '9px',
+    fontWeight: 'bold',
+    color: '#F0B429',
+    marginBottom: '12px',
+    letterSpacing: '1px',
+  },
+  presetGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: '10px',
+  },
+  presetButton: {
+    background: 'linear-gradient(135deg, #0A0E17, #1C2128)',
+    border: '1px solid #F0B429',
+    padding: '12px 8px',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '6px',
+  },
+  presetIcon: {
+    fontSize: '20px',
+  },
+  presetLabel: {
+    fontSize: '9px',
+    fontWeight: 'bold',
+    color: '#F0B429',
     letterSpacing: '0.5px',
   },
   section: {
