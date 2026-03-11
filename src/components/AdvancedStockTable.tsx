@@ -1,334 +1,490 @@
 import React from 'react';
 import { Stock } from '../types';
-import { calculateStockScore, getScoreColor, getRatingColor } from '../utils/scoring';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { calculateStockScore } from '../utils/scoring';
+import { TrendingUp, TrendingDown, X } from 'lucide-react';
 
-interface AdvancedStockTableProps {
+interface CompareViewProps {
   stocks: Stock[];
-  onSort: (column: string) => void;
-  sortColumn: string;
-  sortDirection: 'asc' | 'desc';
-  onStockClick?: (stock: Stock) => void;
+  compareList: string[];
+  onRemoveFromCompare: (symbol: string) => void;
+  onClose: () => void;
 }
 
-const AdvancedStockTable = ({ 
+const CompareView: React.FC<CompareViewProps> = ({ 
   stocks, 
-  onSort, 
-  sortColumn, 
-  sortDirection,
-  onStockClick
-}: AdvancedStockTableProps) => {
-  const formatMarketCap = (price: number): string => {
-    // Simplified market cap estimation based on price
-    const cap = price * 500; // Rough estimation
-    if (cap >= 20000) return 'Large Cap';
-    if (cap >= 5000) return 'Mid Cap';
-    return 'Small Cap';
+  compareList, 
+  onRemoveFromCompare,
+  onClose 
+}) => {
+  const compareStocks = stocks.filter(s => compareList.includes(s.symbol));
+
+  const renderRadarChart = (scores: any) => {
+    const dimensions = [
+      { label: 'Tech', value: scores.technical, angle: 0 },
+      { label: 'Fund', value: scores.fundamental, angle: 72 },
+      { label: 'Macro', value: scores.macro, angle: 144 },
+      { label: 'Micro', value: scores.micro, angle: 216 },
+      { label: 'Sent', value: scores.sentiment, angle: 288 },
+    ];
+
+    const points = dimensions.map(d => {
+      const angle = (d.angle - 90) * (Math.PI / 180);
+      const radius = (d.value / 100) * 45;
+      return {
+        x: 50 + radius * Math.cos(angle),
+        y: 50 + radius * Math.sin(angle),
+      };
+    });
+
+    const pathData = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
+
+    return (
+      <svg viewBox="0 0 100 100" style={{ width: '140px', height: '140px' }}>
+        {/* Grid circles */}
+        {[20, 40, 60, 80, 100].map(pct => (
+          <circle
+            key={pct}
+            cx="50"
+            cy="50"
+            r={(pct / 100) * 45}
+            fill="none"
+            stroke="#30363d"
+            strokeWidth="0.5"
+          />
+        ))}
+        
+        {/* Axes */}
+        {dimensions.map(d => {
+          const angle = (d.angle - 90) * (Math.PI / 180);
+          const x2 = 50 + 45 * Math.cos(angle);
+          const y2 = 50 + 45 * Math.sin(angle);
+          return (
+            <line
+              key={d.label}
+              x1="50"
+              y1="50"
+              x2={x2}
+              y2={y2}
+              stroke="#30363d"
+              strokeWidth="0.5"
+            />
+          );
+        })}
+
+        {/* Data polygon */}
+        <path
+          d={pathData}
+          fill="#f0b429"
+          fillOpacity="0.3"
+          stroke="#f0b429"
+          strokeWidth="1.5"
+        />
+
+        {/* Labels */}
+        {dimensions.map(d => {
+          const angle = (d.angle - 90) * (Math.PI / 180);
+          const x = 50 + 52 * Math.cos(angle);
+          const y = 50 + 52 * Math.sin(angle);
+          return (
+            <text
+              key={d.label}
+              x={x}
+              y={y}
+              fontSize="6"
+              fill="#8b949e"
+              textAnchor="middle"
+              dominantBaseline="middle"
+            >
+              {d.label}
+            </text>
+          );
+        })}
+      </svg>
+    );
   };
 
-  const renderSortIcon = (column: string) => {
-    if (sortColumn !== column) return null;
-    return sortDirection === 'asc' ? '↑' : '↓';
+  const getScoreColor = (score: number) => {
+    if (score >= 75) return '#3fb950';
+    if (score >= 50) return '#f0b429';
+    return '#f85149';
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.tableWrapper}>
-        <table style={styles.table}>
-          <thead>
-            <tr style={styles.headerRow}>
-              <th style={styles.th} onClick={() => onSort('symbol')}>
-                SYMBOL {renderSortIcon('symbol')}
-              </th>
-              <th style={styles.thRight} onClick={() => onSort('price')}>
-                CMP (₹) {renderSortIcon('price')}
-              </th>
-              <th style={styles.thRight} onClick={() => onSort('change')}>
-                CHANGE% {renderSortIcon('change')}
-              </th>
-              <th style={styles.th} onClick={() => onSort('marketCap')}>
-                MKT CAP {renderSortIcon('marketCap')}
-              </th>
-              <th style={styles.thRight} onClick={() => onSort('pe')}>
-                P/E {renderSortIcon('pe')}
-              </th>
-              <th style={styles.thRight} onClick={() => onSort('roe')}>
-                ROE% {renderSortIcon('roe')}
-              </th>
-              <th style={styles.thRight} onClick={() => onSort('rsi')}>
-                RSI {renderSortIcon('rsi')}
-              </th>
-              <th style={styles.th} onClick={() => onSort('macd')}>
-                MACD {renderSortIcon('macd')}
-              </th>
-              <th style={styles.th} onClick={() => onSort('supertrend')}>
-                SUPERTREND {renderSortIcon('supertrend')}
-              </th>
-              <th style={styles.thRight} onClick={() => onSort('pcr')}>
-                PCR {renderSortIcon('pcr')}
-              </th>
-              <th style={styles.thRight} onClick={() => onSort('fii')}>
-                FII FLOW {renderSortIcon('fii')}
-              </th>
-              <th style={styles.th} onClick={() => onSort('analyst')}>
-                ANALYST {renderSortIcon('analyst')}
-              </th>
-              <th style={styles.thRight} onClick={() => onSort('score')}>
-                SCORE {renderSortIcon('score')}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {stocks.length === 0 ? (
-              <tr>
-                <td colSpan={13} style={styles.noData}>
-                  NO STOCKS MATCH YOUR CRITERIA
-                </td>
-              </tr>
-            ) : (
-              stocks.map((stock) => {
-                const score = calculateStockScore(stock);
-                const scoreColor = getScoreColor(score.overall);
-                const ratingColor = getRatingColor(score.rating);
+    <div style={styles.overlay}>
+      <div style={styles.modal}>
+        <div style={styles.modalHeader}>
+          <h2 style={styles.modalTitle}>
+            STOCK COMPARISON ({compareStocks.length}/3)
+          </h2>
+          <button onClick={onClose} style={styles.closeButton}>
+            <X size={20} />
+          </button>
+        </div>
 
-                return (
-                  <tr 
-                    key={stock.symbol} 
-                    style={styles.row}
-                    onClick={() => onStockClick?.(stock)}
-                  >
-                    <td style={styles.tdSymbol}>{stock.symbol}</td>
-                    <td style={styles.tdPrice}>₹{stock.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td style={{
-                      ...styles.tdRight,
-                      color: stock.changePercent >= 0 ? '#00ff41' : '#ff4136',
-                      fontWeight: 'bold'
+        {compareStocks.length === 0 ? (
+          <div style={styles.emptyState}>
+            <p>No stocks selected for comparison</p>
+            <p style={styles.emptyHint}>
+              Click the compare checkbox (☐) on up to 3 stocks to compare them side-by-side
+            </p>
+          </div>
+        ) : (
+          <div style={styles.compareGrid}>
+            {compareStocks.map(stock => {
+              const scores = calculateStockScore(stock);
+              const isPositive = stock.changePercent >= 0;
+
+              return (
+                <div key={stock.symbol} style={styles.compareCard}>
+                  {/* Header */}
+                  <div style={styles.cardHeader}>
+                    <div>
+                      <div style={styles.cardSymbol}>{stock.symbol}</div>
+                      <div style={styles.cardName}>{stock.name}</div>
+                      <div style={styles.cardSector}>{stock.sector}</div>
+                    </div>
+                    <button
+                      onClick={() => onRemoveFromCompare(stock.symbol)}
+                      style={styles.removeButton}
+                      title="Remove from comparison"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+
+                  {/* Price */}
+                  <div style={styles.priceSection}>
+                    <div style={styles.price}>₹{stock.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    <div style={{
+                      ...styles.change,
+                      color: isPositive ? '#3fb950' : '#f85149'
                     }}>
-                      {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
-                    </td>
-                    <td style={styles.tdCap}>{formatMarketCap(stock.price)}</td>
-                    <td style={styles.tdRight}>{stock.fundamental.pe.toFixed(1)}</td>
-                    <td style={{
-                      ...styles.tdRight,
-                      color: stock.fundamental.roe > 15 ? '#00ff41' : '#F0B429'
+                      {isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                      {isPositive ? '+' : ''}{stock.changePercent.toFixed(2)}%
+                    </div>
+                  </div>
+
+                  {/* Overall Score */}
+                  <div style={styles.overallScore}>
+                    <div style={styles.scoreLabel}>OVERALL SCORE</div>
+                    <div style={{
+                      ...styles.scoreBig,
+                      color: getScoreColor(scores.overall)
                     }}>
-                      {stock.fundamental.roe.toFixed(1)}%
-                    </td>
-                    <td style={{
-                      ...styles.tdRight,
-                      color: stock.technical.rsi14 > 70 ? '#ff4136' : 
-                             stock.technical.rsi14 < 30 ? '#00ff41' : '#F0B429'
-                    }}>
-                      {stock.technical.rsi14.toFixed(0)}
-                    </td>
-                    <td style={styles.tdCenter}>
+                      {scores.overall.toFixed(0)}
+                      <span style={styles.scoreMax}>/100</span>
+                    </div>
+                  </div>
+
+                  {/* Radar Chart */}
+                  <div style={styles.radarContainer}>
+                    {renderRadarChart(scores)}
+                  </div>
+
+                  {/* Dimension Scores */}
+                  <div style={styles.dimensionScores}>
+                    {[
+                      { label: 'Technical', value: scores.technical },
+                      { label: 'Fundamental', value: scores.fundamental },
+                      { label: 'Macro', value: scores.macro },
+                      { label: 'Micro', value: scores.micro },
+                      { label: 'Sentiment', value: scores.sentiment },
+                    ].map(dim => (
+                      <div key={dim.label} style={styles.dimensionRow}>
+                        <span style={styles.dimLabel}>{dim.label}</span>
+                        <div style={styles.dimBar}>
+                          <div
+                            style={{
+                              ...styles.dimBarFill,
+                              width: `${dim.value}%`,
+                              backgroundColor: getScoreColor(dim.value)
+                            }}
+                          />
+                        </div>
+                        <span style={styles.dimValue}>{dim.value.toFixed(0)}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Key Metrics */}
+                  <div style={styles.metricsGrid}>
+                    <div style={styles.metricItem}>
+                      <div style={styles.metricLabel}>RSI</div>
+                      <div style={styles.metricValue}>{stock.technical.rsi14.toFixed(1)}</div>
+                    </div>
+                    <div style={styles.metricItem}>
+                      <div style={styles.metricLabel}>P/E</div>
+                      <div style={styles.metricValue}>{stock.fundamental.pe.toFixed(1)}</div>
+                    </div>
+                    <div style={styles.metricItem}>
+                      <div style={styles.metricLabel}>ROE</div>
+                      <div style={styles.metricValue}>{stock.fundamental.roe.toFixed(1)}%</div>
+                    </div>
+                    <div style={styles.metricItem}>
+                      <div style={styles.metricLabel}>P/B</div>
+                      <div style={styles.metricValue}>{stock.fundamental.pb.toFixed(1)}</div>
+                    </div>
+                    <div style={styles.metricItem}>
+                      <div style={styles.metricLabel}>PCR</div>
+                      <div style={styles.metricValue}>{stock.sentiment.optionsPCR.toFixed(2)}</div>
+                    </div>
+                    <div style={styles.metricItem}>
+                      <div style={styles.metricLabel}>FII</div>
                       <div style={{
-                        ...styles.badge,
-                        background: stock.technical.macdSignal === 'bullish' ? 'rgba(0, 255, 65, 0.15)' : 
-                                   stock.technical.macdSignal === 'bearish' ? 'rgba(255, 65, 54, 0.15)' : 
-                                   'rgba(240, 180, 41, 0.15)',
-                        color: stock.technical.macdSignal === 'bullish' ? '#00ff41' : 
-                              stock.technical.macdSignal === 'bearish' ? '#ff4136' : '#F0B429'
+                        ...styles.metricValue,
+                        color: stock.macro.fiiNetBuySell >= 0 ? '#3fb950' : '#f85149'
                       }}>
-                        {stock.technical.macdSignal === 'bullish' && <TrendingUp size={10} />}
-                        {stock.technical.macdSignal === 'bearish' && <TrendingDown size={10} />}
-                        {stock.technical.macdSignal === 'neutral' && <Minus size={10} />}
+                        {stock.macro.fiiNetBuySell >= 0 ? '+' : ''}{stock.macro.fiiNetBuySell.toFixed(0)}
                       </div>
-                    </td>
-                    <td style={styles.tdCenter}>
-                      <div style={{
-                        ...styles.badge,
-                        background: stock.technical.supertrendSignal === 'buy' ? 'rgba(0, 255, 65, 0.15)' : 
-                                   stock.technical.supertrendSignal === 'sell' ? 'rgba(255, 65, 54, 0.15)' : 
-                                   'rgba(240, 180, 41, 0.15)',
-                        color: stock.technical.supertrendSignal === 'buy' ? '#00ff41' : 
-                              stock.technical.supertrendSignal === 'sell' ? '#ff4136' : '#F0B429'
-                      }}>
-                        {stock.technical.supertrendSignal.toUpperCase()}
-                      </div>
-                    </td>
-                    <td style={{
-                      ...styles.tdRight,
-                      color: stock.sentiment.optionsPCR > 1.2 ? '#00ff41' : '#F0B429'
-                    }}>
-                      {stock.sentiment.optionsPCR.toFixed(2)}
-                    </td>
-                    <td style={{
-                      ...styles.tdRight,
-                      color: stock.macro.fiiNetBuySell >= 0 ? '#00ff41' : '#ff4136'
-                    }}>
-                      {stock.macro.fiiNetBuySell >= 0 ? '+' : ''}{stock.macro.fiiNetBuySell.toFixed(0)}
-                    </td>
-                    <td style={styles.tdCenter}>
-                      <div style={{
-                        ...styles.badge,
-                        background: `${ratingColor}22`,
-                        color: ratingColor
-                      }}>
-                        {score.rating.toUpperCase()}
-                      </div>
-                    </td>
-                    <td style={styles.tdScore}>
-                      <div style={styles.scoreContainer}>
-                        <div style={{
-                          ...styles.scoreBar,
-                          width: `${score.overall}%`,
-                          background: `linear-gradient(90deg, ${scoreColor}22 0%, ${scoreColor} 100%)`
-                        }} />
-                        <span style={{ ...styles.scoreText, color: scoreColor }}>
-                          {score.overall}
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-      <div style={styles.footer}>
-        SHOWING {stocks.length} STOCK{stocks.length !== 1 ? 'S' : ''} • COMPOSITE SCORING: TECH(25) + FUND(25) + MACRO(20) + MICRO(15) + SENT(15) = 100
+                    </div>
+                  </div>
+
+                  {/* Signals */}
+                  <div style={styles.signals}>
+                    <div style={styles.signalBadge}>
+                      MACD: {stock.technical.macdSignal.toUpperCase()}
+                    </div>
+                    <div style={styles.signalBadge}>
+                      FOI: {stock.sentiment.foiBuildup.toUpperCase()}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
-  container: {
-    background: '#0d1117',
-    border: '1px solid #F0B429',
+  overlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 9999,
+    padding: '20px',
+  },
+  modal: {
+    backgroundColor: '#0d1117',
+    border: '1px solid #30363d',
+    borderRadius: '8px',
+    maxWidth: '1400px',
+    width: '100%',
+    maxHeight: '90vh',
+    overflow: 'auto',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6)',
+  },
+  modalHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '20px 24px',
+    borderBottom: '1px solid #30363d',
+    position: 'sticky',
+    top: 0,
+    backgroundColor: '#0d1117',
+    zIndex: 10,
+  },
+  modalTitle: {
+    margin: 0,
+    fontSize: '18px',
+    fontWeight: '600',
+    color: '#f0b429',
+    letterSpacing: '0.5px',
+  },
+  closeButton: {
+    background: 'none',
+    border: 'none',
+    color: '#8b949e',
+    cursor: 'pointer',
+    padding: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '4px',
+    transition: 'all 0.2s',
+  },
+  emptyState: {
+    padding: '80px 24px',
+    textAlign: 'center',
+    color: '#8b949e',
+  },
+  emptyHint: {
+    marginTop: '12px',
+    fontSize: '14px',
+    color: '#6e7681',
+  },
+  compareGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))',
+    gap: '20px',
+    padding: '24px',
+  },
+  compareCard: {
+    backgroundColor: '#161b22',
+    border: '1px solid #30363d',
+    borderRadius: '8px',
+    padding: '20px',
+  },
+  cardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: '16px',
+  },
+  cardSymbol: {
+    fontSize: '20px',
+    fontWeight: '700',
+    color: '#f0b429',
+    letterSpacing: '0.5px',
+  },
+  cardName: {
+    fontSize: '13px',
+    color: '#c9d1d9',
+    marginTop: '4px',
+    lineHeight: '1.3',
+  },
+  cardSector: {
+    fontSize: '11px',
+    color: '#6e7681',
+    marginTop: '4px',
+  },
+  removeButton: {
+    background: '#21262d',
+    border: '1px solid #30363d',
+    color: '#8b949e',
+    cursor: 'pointer',
+    padding: '6px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '4px',
+    transition: 'all 0.2s',
+  },
+  priceSection: {
+    marginBottom: '20px',
+    paddingBottom: '16px',
+    borderBottom: '1px solid #21262d',
+  },
+  price: {
+    fontSize: '28px',
+    fontWeight: '700',
+    color: '#c9d1d9',
+    marginBottom: '6px',
+  },
+  change: {
+    fontSize: '15px',
+    fontWeight: '600',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+  },
+  overallScore: {
+    marginBottom: '20px',
+    textAlign: 'center',
+  },
+  scoreLabel: {
+    fontSize: '11px',
+    color: '#6e7681',
+    fontWeight: '600',
+    letterSpacing: '0.5px',
+    marginBottom: '8px',
+  },
+  scoreBig: {
+    fontSize: '48px',
+    fontWeight: '700',
+    lineHeight: '1',
+  },
+  scoreMax: {
+    fontSize: '20px',
+    color: '#6e7681',
+    fontWeight: '400',
+  },
+  radarContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginBottom: '20px',
+  },
+  dimensionScores: {
+    marginBottom: '20px',
+  },
+  dimensionRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    marginBottom: '10px',
+  },
+  dimLabel: {
+    fontSize: '12px',
+    color: '#8b949e',
+    width: '90px',
+    flexShrink: 0,
+  },
+  dimBar: {
+    flex: 1,
+    height: '8px',
+    backgroundColor: '#21262d',
     borderRadius: '4px',
     overflow: 'hidden',
   },
-  tableWrapper: {
-    overflowX: 'auto',
-    overflowY: 'auto',
-    maxHeight: 'calc(100vh - 280px)',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    fontSize: '11px',
-    fontFamily: 'Consolas, Monaco, monospace',
-  },
-  headerRow: {
-    background: '#161b22',
-    position: 'sticky',
-    top: 0,
-    zIndex: 10,
-  },
-  th: {
-    padding: '14px 12px',
-    textAlign: 'left',
-    borderBottom: '2px solid #F0B429',
-    color: '#F0B429',
-    fontWeight: 'bold',
-    whiteSpace: 'nowrap',
-    cursor: 'pointer',
-    userSelect: 'none',
-  },
-  thRight: {
-    padding: '14px 12px',
-    textAlign: 'right',
-    borderBottom: '2px solid #F0B429',
-    color: '#F0B429',
-    fontWeight: 'bold',
-    whiteSpace: 'nowrap',
-    cursor: 'pointer',
-    userSelect: 'none',
-  },
-  row: {
-    borderBottom: '1px solid #1C2128',
-    transition: 'background 0.15s ease',
-    cursor: 'pointer',
-  },
-  tdSymbol: {
-    padding: '12px',
-    color: '#00ff41',
-    fontWeight: 'bold',
-    whiteSpace: 'nowrap',
-  },
-  tdPrice: {
-    padding: '12px',
-    textAlign: 'right',
-    color: '#ffffff',
-    fontWeight: 'bold',
-    fontFamily: 'Consolas, Monaco, monospace',
-    whiteSpace: 'nowrap',
-  },
-  tdRight: {
-    padding: '12px',
-    textAlign: 'right',
-    color: '#8b949e',
-    fontFamily: 'Consolas, Monaco, monospace',
-    whiteSpace: 'nowrap',
-  },
-  tdCenter: {
-    padding: '12px',
-    textAlign: 'center',
-    whiteSpace: 'nowrap',
-  },
-  tdCap: {
-    padding: '12px',
-    color: '#58a6ff',
-    fontSize: '10px',
-    whiteSpace: 'nowrap',
-  },
-  tdScore: {
-    padding: '12px',
-    whiteSpace: 'nowrap',
-  },
-  badge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '4px',
-    padding: '4px 8px',
-    borderRadius: '3px',
-    fontSize: '9px',
-    fontWeight: 'bold',
-  },
-  scoreContainer: {
-    position: 'relative',
-    width: '80px',
-    height: '24px',
-    background: '#0A0E17',
-    borderRadius: '3px',
-    overflow: 'hidden',
-    border: '1px solid #30363d',
-  },
-  scoreBar: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
+  dimBarFill: {
     height: '100%',
-    transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+    transition: 'width 0.3s ease',
   },
-  scoreText: {
-    position: 'absolute',
-    left: '50%',
-    top: '50%',
-    transform: 'translate(-50%, -50%)',
-    fontWeight: 'bold',
-    fontSize: '11px',
-    fontFamily: 'Consolas, Monaco, monospace',
-    textShadow: '0 0 4px rgba(0,0,0,0.8)',
+  dimValue: {
+    fontSize: '12px',
+    fontWeight: '600',
+    color: '#c9d1d9',
+    width: '30px',
+    textAlign: 'right',
+    flexShrink: 0,
   },
-  noData: {
-    padding: '40px',
+  metricsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '12px',
+    marginBottom: '16px',
+    paddingBottom: '16px',
+    borderBottom: '1px solid #21262d',
+  },
+  metricItem: {
     textAlign: 'center',
-    color: '#8b949e',
-    fontSize: '14px',
   },
-  footer: {
-    padding: '12px 16px',
-    background: '#0A0E17',
-    borderTop: '1px solid #F0B429',
-    color: '#F0B429',
+  metricLabel: {
     fontSize: '10px',
-    fontWeight: 'bold',
+    color: '#6e7681',
+    fontWeight: '600',
+    marginBottom: '4px',
     letterSpacing: '0.5px',
+  },
+  metricValue: {
+    fontSize: '14px',
+    fontWeight: '700',
+    color: '#c9d1d9',
+  },
+  signals: {
+    display: 'flex',
+    gap: '8px',
+    flexWrap: 'wrap',
+  },
+  signalBadge: {
+    fontSize: '10px',
+    padding: '4px 10px',
+    backgroundColor: '#21262d',
+    border: '1px solid #30363d',
+    borderRadius: '12px',
+    color: '#8b949e',
+    fontWeight: '600',
+    letterSpacing: '0.3px',
   },
 };
 
-export default AdvancedStockTable;
+export default CompareView;
