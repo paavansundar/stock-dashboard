@@ -1,18 +1,25 @@
 import React from 'react';
 import { Stock } from '../types';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, Star } from 'lucide-react';
 
 interface StockTableProps {
   stocks: Stock[];
+  onStockClick?: (stock: Stock) => void;
+  watchlist?: string[];
+  onToggleWatchlist?: (symbol: string) => void;
+  compareList?: string[];
+  onToggleCompare?: (symbol: string) => void;
 }
 
-const StockTable: React.FC<StockTableProps> = ({ stocks }) => {
+const StockTable: React.FC<StockTableProps> = ({ stocks, onStockClick, watchlist = [], onToggleWatchlist, compareList = [], onToggleCompare }) => {
   return (
     <div style={styles.container}>
       <div style={styles.tableWrapper}>
         <table style={styles.table}>
           <thead>
             <tr style={styles.headerRow}>
+              <th style={styles.thCenter}></th>
+              <th style={styles.thCenter}>☐</th>
               <th style={styles.th}>SYMBOL</th>
               <th style={styles.th}>NAME</th>
               <th style={styles.th}>SECTOR</th>
@@ -29,13 +36,49 @@ const StockTable: React.FC<StockTableProps> = ({ stocks }) => {
           <tbody>
             {stocks.length === 0 ? (
               <tr>
-                <td colSpan={11} style={styles.noData}>
+                <td colSpan={13} style={styles.noData}>
                   NO STOCKS MATCH YOUR CRITERIA
                 </td>
               </tr>
             ) : (
               stocks.map((stock) => (
-                <tr key={stock.symbol} style={styles.row}>
+                <tr 
+                  key={stock.symbol} 
+                  style={styles.row}
+                  onClick={() => onStockClick?.(stock)}
+                >
+                  <td style={styles.tdCenter}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleWatchlist?.(stock.symbol);
+                      }}
+                      style={styles.starButton}
+                    >
+                      <Star 
+                        size={14} 
+                        fill={watchlist.includes(stock.symbol) ? '#f0b429' : 'none'}
+                        color={watchlist.includes(stock.symbol) ? '#f0b429' : '#6e7681'}
+                      />
+                    </button>
+                  </td>
+                  <td style={styles.tdCenter}>
+                    <input
+                      type="checkbox"
+                      checked={compareList.includes(stock.symbol)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        onToggleCompare?.(stock.symbol);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      disabled={!compareList.includes(stock.symbol) && compareList.length >= 3}
+                      style={{
+                        ...styles.checkbox,
+                        cursor: !compareList.includes(stock.symbol) && compareList.length >= 3 ? 'not-allowed' : 'pointer',
+                        opacity: !compareList.includes(stock.symbol) && compareList.length >= 3 ? 0.3 : 1
+                      }}
+                    />
+                  </td>
                   <td style={styles.tdSymbol}>{stock.symbol}</td>
                   <td style={styles.td}>{stock.name}</td>
                   <td style={styles.tdSector}>{stock.sector}</td>
@@ -137,9 +180,40 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 'bold',
     whiteSpace: 'nowrap',
   },
+  thCenter: {
+    padding: '12px 8px',
+    textAlign: 'center',
+    borderBottom: '2px solid #30363d',
+    color: '#58a6ff',
+    fontWeight: 'bold',
+    width: '40px',
+  },
+  tdCenter: {
+    padding: '10px 8px',
+    textAlign: 'center',
+    whiteSpace: 'nowrap',
+  },
+  starButton: {
+    background: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '3px',
+    transition: 'all 0.2s',
+  },
+  checkbox: {
+    width: '16px',
+    height: '16px',
+    cursor: 'pointer',
+    accentColor: '#f0b429',
+  },
   row: {
     borderBottom: '1px solid #21262d',
     transition: 'background 0.15s ease',
+    cursor: 'pointer',
   },
   td: {
     padding: '10px 16px',
